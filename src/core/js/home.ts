@@ -1,17 +1,19 @@
 import axios from "axios"
 import { Launcher } from "./launcher.js"
-import LauncherDB from "../../db/launcher.js";
-import { FabricAPI, MineAPI, QuiltAPI } from "../../interfaces/launcher.js"
+import { FabricAPI, LauncherOptions, MineAPI, QuiltAPI } from "../../interfaces/launcher.js"
 import { AutoUpdater } from "./autoupdater.js"
 import { ipcRenderer } from "electron"
 import { PageBase } from "../base.js"
-import { readdirSync } from "node:fs"
+import { BobertoModpackCustom } from "../../interfaces/boberto.modpack.custom.js";
 
 class HomePage extends PageBase {
+    private instance : HomePage
+    private currentLauncher?: LauncherOptions
     constructor() {
         super({
             pageName: 'home'
         })
+        this.instance = this
         console.log("[CLIENT SIDE] A HOME FOI CARREGADA")
     }
 
@@ -20,7 +22,12 @@ class HomePage extends PageBase {
         this.initUpdater()
         const play = document.getElementById('play') as HTMLButtonElement
         play.addEventListener('click', () => {
-            this.startLauncher()
+            if(!this.currentLauncher){
+                play.innerHTML = '<span class="material-icons">play_disabled</span> Nenhuma versao selecionado..'
+                play.disabled = true
+                return
+            }
+            this.startLauncher(this.currentLauncher!)
             play.innerHTML = '<span class="material-icons">play_disabled</span> Instalando...'
             play.disabled = true
         })
@@ -59,11 +66,34 @@ class HomePage extends PageBase {
         // https://files.minecraftforge.net/net/minecraftforge/forge/maven-metadata.json
     }
 
-    private returnOptionElement(type: 'forge' | 'fabric' | 'vanilla' | 'quilt', version: string) {
+    
+    private async getCustomModpacks() {
+        let custom = (await (await fetch("http://localhost:3000/modpack")).json() as BobertoModpackCustom[])
+
+        // let custom = (await (await fetch("http://api-launcher-boberto.boberto.net/modpack")).json() as BobertoModpackCustom[])
+        return custom
+        // https://files.minecraftforge.net/net/minecraftforge/forge/maven-metadata.json
+    }
+
+    private returnOptionElement(launcherOptions : LauncherOptions, bobertoIntegration?: BobertoModpackCustom) {
         const div = document.createElement('div')
         div.classList.add('flex', 'items-center', 'gap-x-3', 'p-2', 'cursor-pointer', 'border-l-0', 'hover:border-l-4', 'border-blue-500', 'duration-150')
-        div.innerHTML = `<img src="../core/imgs/${type}.png" width="30">${type} ${version}`
-        div.addEventListener('click', () => this.setDropdownItem(div.innerHTML.split('>')[1]))
+   
+        if(bobertoIntegration){
+            div.innerHTML = `<img src="../core/imgs/${launcherOptions.loader?.type!}.png" width="30">${bobertoIntegration.name}`
+            div.addEventListener('click', () => {
+                this.currentLauncher = launcherOptions
+                this.setDropdownItem(bobertoIntegration.name)
+               // this.instance.startLauncher(launcherOptions)
+            })
+            return div
+        }
+        div.addEventListener('click', () => {
+            this.currentLauncher = launcherOptions
+            this.setDropdownItem(launcherOptions.loader?.type ?? "custom")
+           // this.instance.startLauncher(launcherOptions)
+        })
+        div.innerHTML = `<img src="../core/imgs/${launcherOptions.loader?.type!}.png" width="30">${launcherOptions.loader?.type!} ${launcherOptions.version}`
         return div
     }
 
@@ -79,16 +109,57 @@ class HomePage extends PageBase {
         const fabric = await this.getFabricVersions()
         const forge = await this.getForgeVersions()
         const quilt = await this.getQuiltVersions()
+        const customModpacks = await this.getCustomModpacks()
         // const installed = await this.getInstalledVersions()
-
         const options = document.getElementById('options') as HTMLElement
+
+        for(let modpack of customModpacks){
+                let config : LauncherOptions = {
+                    url: modpack.metadata.modpack.manifest,
+                    version: modpack.gameVersion,
+                    loader: {
+                        type: modpack.metadata.modpack.loader.type,
+                        build: modpack.metadata.modpack.loader.build,
+                        enable:  modpack.metadata.modpack.loader.enable == "true"
+                    },
+                    verify: modpack.metadata.modpack.verify == "true"
+                }
+                const customDiv = this.returnOptionElement(config, modpack)                                                                                                                                                                                                      
+                options.appendChild(customDiv)
+        }
 
         for (let version of vanilla) {
             // const installedDiv = this.returnOptionElement('installed', version)
-            const forgeDiv = this.returnOptionElement('forge', version)
-            const fabricDiv = this.returnOptionElement('fabric', version)
-            const vanillaDiv = this.returnOptionElement('vanilla', version)
-            const quiltDiv = this.returnOptionElement('quilt', version)
+            const forgeDiv = this.returnOptionElement({
+                loader: {
+                    type: "forge",
+                    build: "latest",
+                    enable: true
+                },
+                version: version
+            })
+            const fabricDiv = this.returnOptionElement({
+                loader: {
+                    type: "fabric",
+                    build: "latest",
+                    enable: true
+                },
+                version: version
+            })
+            const vanillaDiv = this.returnOptionElement({
+                loader: {
+                    enable: false
+                },
+                version: version
+            })
+            const quiltDiv = this.returnOptionElement({
+                loader: {
+                    type:"quilt",
+                    build: "latest",
+                    enable: true
+                },
+                version: version
+            })
 
             options.appendChild(vanillaDiv)
 
@@ -102,14 +173,12 @@ class HomePage extends PageBase {
                 options.appendChild(quiltDiv)
             }
         }
+
     }
 
-    startLauncher() {
-        const [type, version] = (document.getElementById('version') as HTMLInputElement).value.split(' ')
+    startLauncher(options: LauncherOptions) {
         const launcher = new Launcher()
-        launcher.init(version, type)
-       
-
+        launcher.init(options)
         const barra = document.getElementById('barra') as HTMLElement
 
         launcher.on("progress", (progress: any, size: any, element: any) => {
@@ -124,9 +193,15 @@ class HomePage extends PageBase {
             barra.style.width = `${porcentagem}%`
         })
 
+        launcher.on('extract',( extract : any)=> {
+            console.log(extract);
+        });
+
         launcher.on("error", (err: any) => {
             barra.innerHTML = `<span class="text-red-700">${JSON.stringify(err)}</span>`
             // alert(JSON.stringify(err))
+            console.log(err);
+
         })
 
         launcher.on('data', (data: any) => {
@@ -134,7 +209,7 @@ class HomePage extends PageBase {
             barra.style.width = '100%'
             if (data.includes("Launching")) {
                 barra.innerHTML = '<span class="text-lime-700">Jogo rodando...</span>'
-                ipcRenderer.invoke("playing", `${type} ${version}`)
+                ipcRenderer.invoke("playing", `${options.loader?.type} ${options.version}`)
             }
         })
 

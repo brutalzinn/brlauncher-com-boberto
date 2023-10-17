@@ -1,9 +1,13 @@
-export interface Startlauncher {
+export interface LauncherOptions {
     version: string,
-    username: string,
+    dirName?: string
+    username?: string,
     password?: string
-    maxMemory: string
-    minMemory: string
+    maxMemory?: string
+    minMemory?: string
+    url?: string
+    verify?: boolean
+    loader?: Loader
 }
 
 export interface Cache {
@@ -27,6 +31,12 @@ type version = {
     sha1: string
     compilanceLevel: number
 }
+
+export interface Loader {
+    build?: string
+    enable?: boolean
+    type?: string
+  }
 
 export interface Cache {
     usernames: string[]

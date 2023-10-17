@@ -1,13 +1,15 @@
 import { Launch } from "minecraft-java-core"
 import LauncherSettings from "../../db/launcher.js"
 import Account from "../../db/account.js"
+import { LauncherOptions } from "../../interfaces/launcher.js"
+import path from "path"
 
 class Launcher extends Launch {
     constructor() {
         super()
         console.log("[CLIENT SIDE] CLASSE LAUNCHER CARREGADA")
     }
-    async init(version: string, type: string) {
+    async init(launcherOptions: LauncherOptions) {
         const accounts = await Account.accounts()
         if (!accounts.length) {
             alert("Você não pode jogar sem criar uma conta, vá para o menu 'Contas' para criar uma.")
@@ -19,22 +21,23 @@ class Launcher extends Launch {
         if(!settings) return
 
         const auth = await Account.getAtual()
-
-        await this.Launch({
+        const pathDir = launcherOptions.dirName != null ? path.join(settings.path, launcherOptions.dirName) : settings.path
+        const config = {
             authenticator: this.convert(auth),
             timeout: 10000,
-            path: settings.path,
-            version: version,
+            path: pathDir,
+            version: launcherOptions.version,
             detached: false,
-            downloadFileMultiple: 100,
+            url: launcherOptions.url!,
+            downloadFileMultiple: 10,
             loader: {
-                type: type,
-                build: "latest",
-                enable: !(type == 'vanilla')
+                type: launcherOptions.loader?.type,
+                build: launcherOptions.loader?.build,
+                enable: launcherOptions.loader?.enable
             },
-
-            verify: false,
+            verify: launcherOptions.verify ?? false,
             ignored: ['loader', 'options.txt'],
+            java: true,
             javaPath: settings.javaPath as string,
             screen: {
                 width: settings.width,
@@ -45,10 +48,13 @@ class Launcher extends Launch {
                 min: `${settings.min}M`,
                 max: `${settings.max}M`
             },
-            url: null,
             JVM_ARGS: [],
             GAME_ARGS: []
-        })
+        }
+        await this.Launch(config)
+
+        console.log("[CLIENT SIDE] LAUCNHER ARGS", config)
+
     }
 
     convert(account_connect: any){
