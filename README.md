@@ -7,6 +7,10 @@
   <br>
 </h1>
 
+# Esse launcher se trata de um fork de [BRLauncher](https://github.com/VOTRON157/BRLauncher) e usado para integracao com API de modpacks do Boberto remake.
+
+### Esse repositório é um produto do meu processo de estudos de tomada de decisao crítica para desenvolvimento expressivo de MVPS.
+
 <h4 align="center">Um launcher de Minecraft baseado em <a href="https://www.electronjs.org/" target="_blank">Electron</a>.</h4>
 
 <p align="center">
