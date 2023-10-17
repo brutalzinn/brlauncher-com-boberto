@@ -11,6 +11,8 @@
 
 ### Esse repositório é um produto do meu processo de estudos de tomada de decisao crítica para desenvolvimento expressivo de MVPS.
 
+### API de modpacks: [API-BOBERTO-REMAKE](https://github.com/brutalzinn/api-launcher-boberto-remake)
+
 <h4 align="center">Um launcher de Minecraft baseado em <a href="https://www.electronjs.org/" target="_blank">Electron</a>.</h4>
 
 <p align="center">
