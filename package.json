@@ -1,10 +1,11 @@
 {
   "name": "brlauncher",
-  "version": "1.0.4",
+  "version": "1.0.6",
   "description": "Um launcher de Minecraft Brasileiro",
   "main": "dist/index.js",
   "scripts": {
     "build": "npx electron-packager . BRLauncher --platform=win32 --arch=x64 --overwrite --out build/ & npx ts-node src/build-installer",
+    "deploy": "electron-builder build --win --linux --publish always",
     "setup": "npx ts-node src/build-installer",
     "build:css:dev": "npx tailwindcss -i ./src/core/css/input.css -o ./src/core/css/style.css --watch",
     "build:css": "npx tailwindcss -i ./src/core/css/input.css -o ./src/core/css/style.css",
@@ -43,5 +44,11 @@
     "ts-node": "^10.9.1",
     "typed-emitter": "^2.1.0",
     "typescript": "^5.1.6"
+  },
+  "bobertoApiConfig": {
+    "api_url": "http://api-launcher-boberto.boberto.net",
+    "latest_update_route": "http://api-launcher-boberto.boberto.net/launcher/latest/",
+    "launcher_upload_route": "http://api-launcher-boberto.boberto.net/launcher/${version}/upload",
+    "api_key": "ad7eb49b-e1a7-4796-95fd-f8581b7e7dcf"
   }
 }
